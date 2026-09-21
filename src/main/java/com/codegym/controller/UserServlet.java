@@ -52,6 +52,9 @@ public class UserServlet extends HttpServlet {
                 case "delete":
                     deleteUser(request, response);
                     break;
+                case "test-use-tran":
+                    testUseTran(request, response);
+                    break;
                 default:
                     listUser(request, response);
                     break;
@@ -90,5 +93,14 @@ public class UserServlet extends HttpServlet {
         request.setAttribute("listUser", listUser);
         RequestDispatcher dispatcher = request.getRequestDispatcher("user/list.jsp");
         dispatcher.forward(request, response);
+    }
+
+    private void testUseTran(HttpServletRequest request, HttpServletResponse response) {
+        try {
+            userDAO.insertUpdateUseTransaction();
+            System.out.println("Hoàn tất gọi hàm testUseTran!");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
