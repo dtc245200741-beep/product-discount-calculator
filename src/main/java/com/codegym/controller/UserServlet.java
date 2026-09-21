@@ -31,6 +31,9 @@ public class UserServlet extends HttpServlet {
         }
         try {
             switch (action) {
+                case "create":
+                    insertUser(request, response);
+                    break;
                 case "edit":
                     updateUser(request, response);
                     break;
@@ -49,11 +52,14 @@ public class UserServlet extends HttpServlet {
 
         try {
             switch (action) {
+                case "create":
+                    showNewForm(request, response);
+                    break;
+                case "edit":
+                    showEditForm(request, response);
+                    break;
                 case "delete":
                     deleteUser(request, response);
-                    break;
-                case "test-use-tran":
-                    testUseTran(request, response);
                     break;
                 default:
                     listUser(request, response);
@@ -66,9 +72,40 @@ public class UserServlet extends HttpServlet {
 
     private void listUser(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        List<User> listUser = userDAO.selectAllUsersSP();
+        List<User> listUser = userDAO.selectAllUsers();
         request.setAttribute("listUser", listUser);
         RequestDispatcher dispatcher = request.getRequestDispatcher("user/list.jsp");
+        dispatcher.forward(request, response);
+    }
+
+    private void showNewForm(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        RequestDispatcher dispatcher = request.getRequestDispatcher("user/create.jsp");
+        dispatcher.forward(request, response);
+    }
+
+    private void showEditForm(HttpServletRequest request, HttpServletResponse response)
+            throws SQLException, ServletException, IOException {
+        int id = Integer.parseInt(request.getParameter("id"));
+        // Gọi Stored Procedure getUserById thay vì selectUser
+        User existingUser = userDAO.getUserById(id);
+        RequestDispatcher dispatcher = request.getRequestDispatcher("user/edit.jsp");
+        request.setAttribute("user", existingUser);
+        dispatcher.forward(request, response);
+    }
+
+    private void insertUser(HttpServletRequest request, HttpServletResponse response)
+            throws SQLException, IOException, ServletException {
+        String name = request.getParameter("name");
+        String email = request.getParameter("email");
+        String country = request.getParameter("country");
+        User newUser = new User(name, email, country);
+        
+        // Gọi Stored Procedure insertUserStore thay vì insertUser
+        userDAO.insertUserStore(newUser);
+        
+        RequestDispatcher dispatcher = request.getRequestDispatcher("user/create.jsp");
+        request.setAttribute("message", "Đã thêm mới User thành công!");
         dispatcher.forward(request, response);
     }
 
@@ -80,27 +117,19 @@ public class UserServlet extends HttpServlet {
         String country = request.getParameter("country");
 
         User book = new User(id, name, email, country);
-        userDAO.updateUserSP(book);
-        response.sendRedirect("users");
+        userDAO.updateUser(book);
+        RequestDispatcher dispatcher = request.getRequestDispatcher("user/edit.jsp");
+        dispatcher.forward(request, response);
     }
 
     private void deleteUser(HttpServletRequest request, HttpServletResponse response)
             throws SQLException, IOException, ServletException {
         int id = Integer.parseInt(request.getParameter("id"));
-        userDAO.deleteUserSP(id);
+        userDAO.deleteUser(id);
 
-        List<User> listUser = userDAO.selectAllUsersSP();
+        List<User> listUser = userDAO.selectAllUsers();
         request.setAttribute("listUser", listUser);
         RequestDispatcher dispatcher = request.getRequestDispatcher("user/list.jsp");
         dispatcher.forward(request, response);
-    }
-
-    private void testUseTran(HttpServletRequest request, HttpServletResponse response) {
-        try {
-            userDAO.insertUpdateUseTransaction();
-            System.out.println("Hoàn tất gọi hàm testUseTran!");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 }

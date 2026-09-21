@@ -5,8 +5,13 @@ import java.sql.SQLException;
 import java.util.List;
 
 public interface IUserDAO {
-    List<User> selectAllUsersSP();
-    boolean updateUserSP(User user);
-    boolean deleteUserSP(int id);
-    void insertUpdateUseTransaction() throws SQLException;
+    void insertUser(User user) throws SQLException;
+    User selectUser(int id);
+    List<User> selectAllUsers();
+    boolean deleteUser(int id) throws SQLException;
+    boolean updateUser(User user) throws SQLException;
+
+    // THÊM MỚI 2 PHƯƠNG THỨC SỬ DỤNG STORED PROCEDURE
+    User getUserById(int id);
+    void insertUserStore(User user) throws SQLException;
 }
