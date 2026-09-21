@@ -38,7 +38,7 @@ public class UserServlet extends HttpServlet {
                     updateUser(request, response);
                     break;
             }
-        } catch (SQLException ex) {
+        } catch (Exception ex) {
             throw new ServletException(ex);
         }
     }
@@ -87,7 +87,6 @@ public class UserServlet extends HttpServlet {
     private void showEditForm(HttpServletRequest request, HttpServletResponse response)
             throws SQLException, ServletException, IOException {
         int id = Integer.parseInt(request.getParameter("id"));
-        // Gọi Stored Procedure getUserById thay vì selectUser
         User existingUser = userDAO.getUserById(id);
         RequestDispatcher dispatcher = request.getRequestDispatcher("user/edit.jsp");
         request.setAttribute("user", existingUser);
@@ -95,18 +94,25 @@ public class UserServlet extends HttpServlet {
     }
 
     private void insertUser(HttpServletRequest request, HttpServletResponse response)
-            throws SQLException, IOException, ServletException {
+            throws Exception {
         String name = request.getParameter("name");
         String email = request.getParameter("email");
         String country = request.getParameter("country");
+
+        String[] permissionsStr = request.getParameterValues("permissions");
+        int[] permissions = null;
+
+        if (permissionsStr != null) {
+            permissions = new int[permissionsStr.length];
+            for (int i = 0; i < permissionsStr.length; i++) {
+                permissions[i] = Integer.parseInt(permissionsStr[i]);
+            }
+        }
+
         User newUser = new User(name, email, country);
-        
-        // Gọi Stored Procedure insertUserStore thay vì insertUser
-        userDAO.insertUserStore(newUser);
-        
-        RequestDispatcher dispatcher = request.getRequestDispatcher("user/create.jsp");
-        request.setAttribute("message", "Đã thêm mới User thành công!");
-        dispatcher.forward(request, response);
+        userDAO.addUserTransaction(newUser, permissions);
+
+        response.sendRedirect("users");
     }
 
     private void updateUser(HttpServletRequest request, HttpServletResponse response)

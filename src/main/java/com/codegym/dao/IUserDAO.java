@@ -11,7 +11,9 @@ public interface IUserDAO {
     boolean deleteUser(int id) throws SQLException;
     boolean updateUser(User user) throws SQLException;
 
-    // THÊM MỚI 2 PHƯƠNG THỨC SỬ DỤNG STORED PROCEDURE
     User getUserById(int id);
     void insertUserStore(User user) throws SQLException;
+
+    // THÊM MỚI PHƯƠNG THỨC XỬ LÝ TRANSACTION
+    void addUserTransaction(User user, int[] permissionIds) throws SQLException;
 }

@@ -7,6 +7,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,8 +16,7 @@ public class UserDAO implements IUserDAO {
     private String jdbcUsername = "root";
     private String jdbcPassword = "123";
 
-    private static final String INSERT_USERS_SQL = "INSERT INTO users" + "  (name, email, country) VALUES "
-            + " (?, ?, ?);";
+    private static final String INSERT_USERS_SQL = "INSERT INTO users (name, email, country) VALUES (?, ?, ?);";
     private static final String SELECT_USER_BY_ID = "select id,name,email,country from users where id =?";
     private static final String SELECT_ALL_USERS = "select * from users";
     private static final String DELETE_USERS_SQL = "delete from users where id = ?;";
@@ -109,19 +109,14 @@ public class UserDAO implements IUserDAO {
         return rowUpdated;
     }
 
-    // --- TRIỂN KHAI 2 PHƯƠNG THỨC STORED PROCEDURE ---
-
     @Override
     public User getUserById(int id) {
         User user = null;
         String query = "{CALL get_user_by_id(?)}";
-
         try (Connection connection = getConnection();
              CallableStatement callableStatement = connection.prepareCall(query)) {
-            
             callableStatement.setInt(1, id);
             ResultSet rs = callableStatement.executeQuery();
-
             while (rs.next()) {
                 String name = rs.getString("name");
                 String email = rs.getString("email");
@@ -137,14 +132,80 @@ public class UserDAO implements IUserDAO {
     @Override
     public void insertUserStore(User user) throws SQLException {
         String query = "{CALL insert_user(?, ?, ?)}";
-
         try (Connection connection = getConnection();
              CallableStatement callableStatement = connection.prepareCall(query)) {
-            
             callableStatement.setString(1, user.getName());
             callableStatement.setString(2, user.getEmail());
             callableStatement.setString(3, user.getCountry());
             callableStatement.executeUpdate();
+        }
+    }
+
+    // --- TRIỂN KHAI PHƯƠNG THỨC TRANSACTION ---
+    @Override
+    public void addUserTransaction(User user, int[] permissionIds) throws SQLException {
+        Connection connection = null;
+        PreparedStatement pstmtUser = null;
+        PreparedStatement pstmtAssignment = null;
+        ResultSet rs = null;
+
+        try {
+            connection = getConnection();
+            
+            // 1. Tắt auto-commit
+            connection.setAutoCommit(false);
+
+            // 2. Chèn user và lấy generated key ID
+            String insertUserSql = "INSERT INTO users (name, email, country) VALUES (?, ?, ?)";
+            pstmtUser = connection.prepareStatement(insertUserSql, Statement.RETURN_GENERATED_KEYS);
+            pstmtUser.setString(1, user.getName());
+            pstmtUser.setString(2, user.getEmail());
+            pstmtUser.setString(3, user.getCountry());
+            pstmtUser.executeUpdate();
+
+            // 3. Lấy ID user vừa tạo
+            rs = pstmtUser.getGeneratedKeys();
+            int userId = 0;
+            if (rs.next()) {
+                userId = rs.getInt(1);
+            }
+
+            // 4. Chèn danh sách permissions
+            if (permissionIds != null && permissionIds.length > 0) {
+                String insertPermissionSql = "INSERT INTO user_permission (user_id, permission_id) VALUES (?, ?)";
+                pstmtAssignment = connection.prepareStatement(insertPermissionSql);
+
+                for (int permissionId : permissionIds) {
+                    pstmtAssignment.setInt(1, userId);
+                    pstmtAssignment.setInt(2, permissionId);
+                    pstmtAssignment.executeUpdate();
+                }
+            }
+
+            // 5. Commit khi hoàn tất
+            connection.commit();
+            System.out.println("Transaction thành công!");
+
+        } catch (SQLException e) {
+            // 6. Rollback khi gặp lỗi
+            try {
+                if (connection != null) {
+                    connection.rollback();
+                    System.out.println("Transaction đã bị rollback.");
+                }
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
+            e.printStackTrace();
+        } finally {
+            // 7. Đóng tài nguyên và bật lại auto-commit
+            if (rs != null) rs.close();
+            if (pstmtUser != null) pstmtUser.close();
+            if (pstmtAssignment != null) pstmtAssignment.close();
+            if (connection != null) {
+                connection.setAutoCommit(true);
+                connection.close();
+            }
         }
     }
 }
