@@ -272,4 +272,49 @@ public class UserDAO implements IUserDAO {
         }
         return rowDeleted;
     }
-}
+}private static final String SQL_INSERT = "INSERT INTO EMPLOYEE (NAME, SALARY, CREATED_DATE) VALUES (?,?,?)";
+    private static final String SQL_UPDATE = "UPDATE EMPLOYEE SET SALARY=? WHERE NAME=?";
+    private static final String SQL_TABLE_CREATE = "CREATE TABLE EMPLOYEE"
+            + " ("
+            + " ID serial,"
+            + " NAME varchar(100) NOT NULL,"
+            + " SALARY numeric(15, 2),"
+            + " CREATED_DATE timestamp,"
+            + " PRIMARY KEY (ID)"
+            + " )";
+    private static final String SQL_TABLE_DROP = "DROP TABLE IF EXISTS EMPLOYEE";
+
+    @Override
+    public void insertUpdateUseTransaction() {
+        try (Connection conn = getConnection();
+             Statement statement = conn.createStatement();
+             PreparedStatement psInsert = conn.prepareStatement(SQL_INSERT);
+             PreparedStatement psUpdate = conn.prepareStatement(SQL_UPDATE)) {
+
+            statement.execute(SQL_TABLE_DROP);
+            statement.execute(SQL_TABLE_CREATE);
+
+            conn.setAutoCommit(false); 
+
+            psInsert.setString(1, "Quynh");
+            psInsert.setBigDecimal(2, new java.math.BigDecimal(10));
+            psInsert.setTimestamp(3, java.sql.Timestamp.valueOf(java.time.LocalDateTime.now()));
+            psInsert.execute();
+
+            psInsert.setString(1, "Ngan");
+            psInsert.setBigDecimal(2, new java.math.BigDecimal(20));
+            psInsert.setTimestamp(3, java.sql.Timestamp.valueOf(java.time.LocalDateTime.now()));
+            psInsert.execute();
+
+            psUpdate.setBigDecimal(1, new java.math.BigDecimal(999.99));
+            psUpdate.setString(2, "Quynh");
+            psUpdate.execute();
+
+            conn.commit();
+            conn.setAutoCommit(true);
+
+        } catch (Exception e) {
+            System.out.println("Lỗi xảy ra, Transaction sẽ tự động huỷ bỏ (rollback)!");
+            e.printStackTrace();
+        }
+    }
